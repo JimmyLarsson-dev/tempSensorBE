@@ -14,15 +14,11 @@ public class TempService {
         this.tempRepo = tempRepo;
     }
 
-    public TempResponse[] getTemps() {
-//        TempResponse[] temps = new TempResponse[2];
-//        TempResponse temp1 = new TempResponse(20, 25, true, new java.util.Date());
-//        TempResponse temp2 = new TempResponse(22, 23, false, new java.util.Date());
-//        temps[0] = temp1;
-//        temps[1] = temp2;
-
+    public TempResponse[] getLatestTemps() {
         return tempRepo.findAll()
                 .stream()
+                .sorted((t1, t2) -> t2.getTimeStamp().compareTo(t1.getTimeStamp()))
+                .limit(10)
                 .map(t -> new TempResponse(
                         t.getTemp1(),
                         t.getTemp2(),
@@ -40,7 +36,17 @@ public class TempService {
                 true,
                 Date.from(Instant.parse(tempReport.getTimeStamp()))
                 ));
-
         return ResponseEntity.ok("Temps reported");
+    }
+
+    public TempResponse[] getAllTemps() {
+        return tempRepo.findAll()
+                .stream()
+                .map(t -> new TempResponse(
+                        t.getTemp1(),
+                        t.getTemp2(),
+                        true,
+                        t.getTimeStamp()))
+                .toArray(temp -> new TempResponse[temp]);
     }
 }

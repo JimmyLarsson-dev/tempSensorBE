@@ -12,10 +12,16 @@ public class TempController {
         this.tempService = tempService;
     }
 
-    @GetMapping("/get")
-    public TempResponse[] getTemps() {
-        return tempService.getTemps();
+    @GetMapping("/getLatest")
+    public TempResponse[] getLatestTemps() {
+        return tempService.getLatestTemps();
     }
+
+    @GetMapping("/getAll")
+    public TempResponse[] getAllTemps() {
+        return tempService.getAllTemps();
+    }
+
     @PostMapping("/report")
     public ResponseEntity<String> reportTemps(@RequestBody TempReport tempReport) {
         return tempService.reportTemps(tempReport);
