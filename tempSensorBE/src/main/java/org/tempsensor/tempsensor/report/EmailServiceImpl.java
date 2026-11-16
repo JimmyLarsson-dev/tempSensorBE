@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailServiceImpl implements EmailService {
 
+    public static final String SUCCESS_MESSAGE = "Email sent successfully";
+
     private final JavaMailSender javaMailSender;
 
     public EmailServiceImpl(JavaMailSender javaMailSender) {
@@ -25,7 +27,7 @@ public class EmailServiceImpl implements EmailService {
             message.setSubject(emailDetails.getSubject());
             message.setText(emailDetails.getMsgBody());
             javaMailSender.send(message);
-            return "Email sent successfully";
+            return SUCCESS_MESSAGE;
         } catch (Exception e) {
             e.printStackTrace();
             return "Email error: " + e.getMessage();

@@ -7,9 +7,9 @@ import java.util.Date;
 
 @Data
 @AllArgsConstructor
-public class TempResponse {
-    int temp1;
-    int temp2;
+public class TemperatureResponse {
+    int temperature1;
+    int temperature2;
     boolean heaterShouldBeOn;
     Date timeStamp;
 }
