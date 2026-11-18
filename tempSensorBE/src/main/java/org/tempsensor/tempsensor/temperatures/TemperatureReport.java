@@ -1,6 +1,7 @@
 package org.tempsensor.tempsensor.temperatures;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
@@ -9,4 +10,5 @@ public class TemperatureReport {
     int temperature2;
     @JsonAlias({"timestamp", "time_stamp", "time"})
     String timeStamp;
+    int minTemperature;
 }

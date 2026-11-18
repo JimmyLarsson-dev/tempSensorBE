@@ -6,8 +6,10 @@ import org.tempsensor.tempsensor.report.EmailDetails;
 import org.tempsensor.tempsensor.report.EmailServiceImpl;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
 import java.util.UUID;
 
 @Service
@@ -15,17 +17,16 @@ public class TemperatureService {
 
     TemperatureRepo temperatureRepo;
     EmailServiceImpl emailService;
-    public TemperatureService(TemperatureRepo temperatureRepo, EmailServiceImpl emailService) {
-
+    HeaterDecider heaterDecider;
+    public TemperatureService(TemperatureRepo temperatureRepo, EmailServiceImpl emailService, HeaterDecider heaterDecider) {
+        this.heaterDecider = heaterDecider;
         this.temperatureRepo = temperatureRepo;
         this.emailService = emailService;
     }
 
     public TemperatureResponse[] getLatestTemps() {
-        return temperatureRepo.findAll()
+        return temperatureRepo.findTop20ByOrderByTimeStampDesc()
                 .stream()
-                .sorted((t1, t2) -> t2.getTimeStamp().compareTo(t1.getTimeStamp()))
-                .limit(10)
                 .map(t -> new TemperatureResponse(
                         t.getTemperature1(),
                         t.getTemperature2(),
@@ -37,23 +38,38 @@ public class TemperatureService {
     public ResponseEntity<String> reportTemperatures(TemperatureReport temperatureReport) {
         Instant timeStamp;
         try {
-            timeStamp = temperatureReport.getTimeStamp() == null
-                    ? Instant.now()
-                    : Instant.parse(temperatureReport.getTimeStamp());
+            timeStamp = parseTimeStamp(temperatureReport.getTimeStamp());
         } catch (DateTimeParseException e) {
             return ResponseEntity.badRequest()
                     .body("Invalid timeStamp, expected ISO-8601 like 2026-11-16T12:00:00Z");
         }
-
-        temperatureRepo.save(
-                new TemperatureEntity(
-                UUID.randomUUID().toString(),
-                temperatureReport.getTemperature1(),
-                temperatureReport.getTemperature2(),
-                true,
-                Date.from(timeStamp)
-                ));
+        boolean turnHeaterOn = heaterDecider.shouldHeaterBeOn(temperatureReport);
+        TemperatureEntity temperatureEntity = TemperatureEntity.builder()
+                .id(UUID.randomUUID().toString())
+                .temperature1(temperatureReport.getTemperature1())
+                .temperature2(temperatureReport.getTemperature2())
+                .minTemperature(temperatureReport.getMinTemperature())
+                .heaterOn(turnHeaterOn)
+                .timeStamp(timeStamp)
+                .build();
+        temperatureRepo.save(temperatureEntity);
         return ResponseEntity.ok("Temps reported");
+    }
+
+    /**
+     * No timestamp -> now.
+     * With zone/offset ("2026-11-16T12:00:00Z", "2026-11-16T13:00:00+01:00") -> that exact moment.
+     * Without zone ("2026-11-16T13:00:00") -> interpreted as the server's local time.
+     */
+    static Instant parseTimeStamp(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Instant.now();
+        }
+        try {
+            return OffsetDateTime.parse(raw).toInstant();
+        } catch (DateTimeParseException e) {
+            return LocalDateTime.parse(raw).atZone(ZoneId.systemDefault()).toInstant();
+        }
     }
 
     public TemperatureResponse[] getAllTemps() {

@@ -8,8 +8,7 @@ import org.tempsensor.tempsensor.temperatures.TemperatureRepo;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
-import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -17,6 +16,7 @@ public class Mailer {
 
     private static final long CHECK_INTERVAL_MS = 1000 * 60 * 5; // five minutes
     private static final Duration ALERT_COOLDOWN = Duration.ofMinutes(30);
+    private static final Duration MAX_DATA_AGE = Duration.ofMinutes(15);
 
     private final EmailService emailService;
     private final TemperatureRepo temperatureRepo;
@@ -41,22 +41,18 @@ public class Mailer {
     }
 
     private void checkTemperatures() {
-        List<TemperatureEntity> temps = temperatureRepo.findAll();
+        Optional<TemperatureEntity> latest = temperatureRepo.findFirstByOrderByTimeStampDesc();
         //om db är tom
-        if (temps.isEmpty()) {
+        if (latest.isEmpty()) {
             sendNoContentWarning();
             return; // ends only this check; the next one runs in five minutes
         }
-        List<TemperatureEntity> sortedByDate = temps
-                .stream()
-                .sorted((t1, t2) -> t2.getTimeStamp().compareTo(t1.getTimeStamp()))
-                .toList();
-        Date lastTemp = sortedByDate.getFirst().getTimeStamp();
-        Date now = new Date();
-        long diffInMillies = Math.abs(now.getTime() - lastTemp.getTime());
+
+        Instant lastTemp = latest.get().getTimeStamp();
+        Duration age = Duration.between(lastTemp, Instant.now());
         //om db har inte uppdaterats de senast 15 minuterna
-        if (diffInMillies > 1000 * 60 * 15) {
-            sendDatabaseNotUpdatedWarning(diffInMillies / (1000 * 60));
+        if (age.compareTo(MAX_DATA_AGE) > 0) {
+            sendDatabaseNotUpdatedWarning(age.toMinutes());
         }
         //om temperaturen har varit för låg i 10 minuter
     }
