@@ -62,6 +62,11 @@ public class Mailer {
         sendTheMail(content);
     }
 
+    public void sendHeaterFailureWarning(String onOrOff, String errorMessage) {
+        String content = "Could not turn the heater " + onOrOff + ". Error: " + errorMessage;
+        sendTheMail(content);
+    }
+
     private void sendNoContentWarning() {
         String content = "There seems to be no content in the database. What happened?";
         sendTheMail(content);
